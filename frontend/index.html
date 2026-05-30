@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portaldot Onchain Analyst</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:           #FFFFFF;
+      --muted:        #F4F4F4;
+      --muted2:       #E8E8E8;
+      --fg:           #000000;
+      --fg2:          #333333;
+      --fg3:          #666666;
+      --accent:       #1E3FAF;   /* deep royal blue — easy on eyes */
+      --accent-h:     #162E85;   /* hover / darker */
+      --accent-lt:    #EEF2FF;   /* light tint for insight bg */
+      --border:       #000000;
+      --border-lt:    #D8D8D8;
+      --ok:           #16A34A;
+      --err:          #DC2626;
+      --mono:         'SF Mono','Consolas','Courier New',monospace;
+      --sans:         'Inter', sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{font-size:14px}
+    body{
+      font-family:var(--sans);background:var(--bg);color:var(--fg);
+      min-height:100vh;
+      /* Subtle noise: grid texture on body */
+      background-image:
+        linear-gradient(rgba(0,0,0,.025) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(0,0,0,.025) 1px,transparent 1px);
+      background-size:24px 24px;
+    }
+
+    /* ── HEADER ──────────────────────────────────────────────────────── */
+    header{
+      background:var(--fg);color:var(--bg);
+      padding:0 24px;display:flex;align-items:stretch;gap:0;
+      position:sticky;top:0;z-index:100;height:52px;
+    }
+    .hd-logo{
+      display:flex;align-items:center;gap:10px;
+      padding-right:20px;border-right:1px solid #333;
+    }
+    .hd-logo-sq{
+      width:26px;height:26px;background:var(--accent);flex-shrink:0;
+    }
+    .hd-logo h1{
+      font-size:13px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+      white-space:nowrap;
+    }
+    .hd-mid{
+      display:flex;align-items:center;padding:0 20px;
+      border-right:1px solid #333;flex:1;
+    }
+    .hd-sub{font-size:11px;color:#999;letter-spacing:.04em;text-transform:uppercase}
+    .hd-right{display:flex;align-items:center;padding:0 20px;gap:12px}
+    .sdot{
+      width:7px;height:7px;border-radius:50%;background:#555;
+      flex-shrink:0;transition:background .4s;
+    }
+    .sdot.ok{background:var(--ok);animation:pg 2.4s ease-in-out infinite}
+    .sdot.err{background:var(--err)}
+    @keyframes pg{0%,100%{opacity:1}50%{opacity:.4}}
+    #stext{font-size:11px;color:#999;letter-spacing:.06em;text-transform:uppercase}
+    #blockNum{font-family:var(--mono);font-size:11px;color:#aaa}
+
+    /* ── DASHBOARD ───────────────────────────────────────────────────── */
+    .dash{
+      background:var(--muted);border-bottom:2px solid var(--border);
+      display:flex;gap:0;overflow-x:auto;
+      /* dot matrix on dashboard */
+      background-image:radial-gradient(rgba(0,0,0,.07) 1px,transparent 1px);
+      background-size:16px 16px;
+      background-color:var(--muted);
+    }
+    .dtile{
+      flex:1;min-width:140px;padding:14px 20px;
+      border-right:2px solid var(--border);cursor:default;
+      background:var(--muted);transition:background .15s;
+      position:relative;overflow:hidden;
+    }
+    .dtile:last-child{border-right:none}
+    .dtile:hover{background:var(--muted2)}
+    .dtile.accent-tile{border-top:3px solid var(--accent)}
+    .dl{
+      font-size:10px;font-weight:700;letter-spacing:.12em;
+      text-transform:uppercase;color:var(--fg3);margin-bottom:6px;
+    }
+    .dv{
+      font-size:26px;font-weight:900;color:var(--fg);
+      font-family:var(--mono);line-height:1;
+    }
+    .dtile.accent-tile .dv{color:var(--accent)}
+    .ds{font-size:10px;color:var(--fg3);margin-top:4px;letter-spacing:.04em}
+
+    /* ── PAGE GRID ───────────────────────────────────────────────────── */
+    .pgrid{
+      display:grid;grid-template-columns:1fr 248px;gap:0;
+      max-width:1280px;margin:0 auto;align-items:start;
+    }
+    .qcol{padding:24px 24px 60px;border-right:2px solid var(--border);min-width:0}
+    .feed-col{padding:24px 20px;position:sticky;top:52px}
+
+    /* ── SECTION LABEL ───────────────────────────────────────────────── */
+    .slabel{
+      display:flex;align-items:baseline;gap:8px;
+      font-size:10px;font-weight:700;letter-spacing:.14em;
+      text-transform:uppercase;color:var(--fg);margin-bottom:10px;
+    }
+    .slabel-num{color:var(--accent);font-weight:900}
+
+    /* ── CHIPS ───────────────────────────────────────────────────────── */
+    .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px}
+    .chip{
+      background:var(--bg);border:1.5px solid var(--border);
+      padding:5px 12px;font-size:11px;font-weight:600;
+      letter-spacing:.04em;cursor:pointer;color:var(--fg);
+      transition:background .1s,color .1s;user-select:none;
+      text-transform:uppercase;
+    }
+    .chip:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+
+    /* ── INPUT ───────────────────────────────────────────────────────── */
+    .irow{display:flex;gap:0;margin-bottom:6px;border:2px solid var(--border)}
+    .irow input{
+      flex:1;background:var(--bg);border:none;outline:none;
+      padding:10px 14px;font-size:13px;color:var(--fg);
+      font-family:var(--sans);
+    }
+    .irow input::placeholder{color:#AAAAAA;font-size:12px}
+    .irow input:focus{background:#FAFAFA}
+    #runBtn{
+      background:var(--fg);color:var(--bg);border:none;
+      padding:10px 22px;font-size:11px;font-weight:900;
+      letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+      transition:background .1s;white-space:nowrap;
+      border-left:2px solid var(--border);
+    }
+    #runBtn:hover{background:var(--accent)}
+    #runBtn:disabled{background:#999;cursor:not-allowed}
+    .ihint{font-size:10px;color:var(--fg3);letter-spacing:.04em;margin-bottom:20px}
+
+    /* ── HISTORY ─────────────────────────────────────────────────────── */
+    #histRow{margin-bottom:16px}
+    .hlabel{font-size:10px;font-weight:700;letter-spacing:.12em;
+            text-transform:uppercase;color:var(--fg3);margin-bottom:5px}
+    .hchips{display:flex;flex-wrap:wrap;gap:5px}
+    .hchip{
+      background:var(--muted);border:1px solid var(--border-lt);
+      padding:3px 10px;font-size:10px;font-weight:600;cursor:pointer;
+      color:var(--fg2);letter-spacing:.04em;text-transform:uppercase;
+      transition:border-color .1s,color .1s;user-select:none;
+      max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .hchip:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* ── RESULT BOX ──────────────────────────────────────────────────── */
+    .rbox{
+      background:var(--bg);border:2px solid var(--border);
+    }
+    .rheader{
+      padding:16px 18px 14px;border-bottom:2px solid var(--border);
+      background:var(--muted);
+    }
+    .rq{font-size:14px;color:var(--fg);line-height:1.5;font-weight:500}
+    .rfn{
+      display:inline-block;margin-top:7px;
+      background:var(--fg);color:var(--bg);
+      padding:3px 10px;font-size:11px;font-family:var(--mono);
+      letter-spacing:.03em;
+    }
+    .metarow{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .mpill{
+      display:inline-flex;align-items:center;gap:4px;
+      border:1px solid var(--border-lt);padding:2px 8px;
+      font-size:10px;font-weight:700;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--fg3);
+    }
+    .mpill .mv{color:var(--fg);font-family:var(--mono)}
+    .mpill.cached{border-color:var(--accent);color:var(--accent)}
+    .cbadge{
+      display:inline-flex;align-items:center;gap:5px;
+      border:1px solid var(--accent);padding:2px 9px;
+      font-size:10px;font-weight:700;letter-spacing:.06em;
+      text-transform:uppercase;color:var(--accent);
+    }
+    .cdot{
+      width:6px;height:6px;border-radius:50%;background:var(--accent);
+      animation:pg 1.8s ease-in-out infinite;flex-shrink:0;
+    }
+    .chash{font-family:var(--mono);color:var(--accent-h);cursor:pointer;font-size:10px}
+    .chash:hover{text-decoration:underline}
+
+    /* ── TABLE TOOLBAR ───────────────────────────────────────────────── */
+    .ttbar{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:10px 18px 8px;gap:8px;
+    }
+    .rowcnt{font-size:10px;font-weight:700;letter-spacing:.1em;
+            text-transform:uppercase;color:var(--fg3)}
+    .ebtns{display:flex;gap:4px}
+    .ebtn{
+      background:var(--bg);border:1.5px solid var(--border);
+      padding:3px 10px;font-size:10px;font-weight:700;
+      letter-spacing:.08em;text-transform:uppercase;color:var(--fg);
+      cursor:pointer;transition:background .1s,color .1s;
+    }
+    .ebtn:hover{background:var(--fg);color:var(--bg)}
+
+    /* ── TABLE ───────────────────────────────────────────────────────── */
+    .twrap{overflow-x:auto;padding:0 0 2px}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    th{
+      background:var(--fg);color:var(--bg);padding:8px 14px;
+      text-align:left;font-size:10px;font-weight:700;
+      letter-spacing:.1em;text-transform:uppercase;
+      white-space:nowrap;cursor:pointer;user-select:none;
+    }
+    th:hover{background:#222}
+    th .sa{margin-left:4px;opacity:.4;font-size:9px}
+    th.asc .sa::after{content:'▲';opacity:1}
+    th.desc .sa::after{content:'▼';opacity:1}
+    th .sa::after{content:'⇅'}
+    td{
+      padding:8px 14px;border-bottom:1px solid var(--border-lt);
+      color:var(--fg);max-width:280px;overflow:hidden;
+      text-overflow:ellipsis;white-space:nowrap;
+    }
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:var(--muted)}
+    tbody tr{animation:rowIn .14s ease both}
+    @keyframes rowIn{from{opacity:0;transform:translateY(2px)}to{opacity:1;transform:none}}
+    td.num{color:var(--accent);font-family:var(--mono);font-weight:700;text-align:right}
+    td.addr{font-family:var(--mono);font-size:11px;color:var(--fg2)}
+    td.hash{font-family:var(--mono);font-size:11px;color:var(--fg3)}
+    .ccell{display:flex;align-items:center;gap:4px}
+    .cpbtn{
+      background:none;border:none;color:#BBBBBB;cursor:pointer;
+      font-size:11px;padding:0 2px;transition:color .1s;flex-shrink:0;
+    }
+    .cpbtn:hover{color:var(--accent)}
+    .cpbtn.ok{color:var(--ok)}
+
+    /* ── CHART ───────────────────────────────────────────────────────── */
+    .chart-wrap{
+      height:200px;margin:0 18px 16px;padding-top:14px;
+      border-top:1px solid var(--border-lt);
+    }
+
+    /* ── AI BAR ──────────────────────────────────────────────────────── */
+    .ai-bar{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:10px 18px;border-top:2px solid var(--border);
+      background:var(--muted);gap:10px;
+    }
+    .ai-bar-hint{font-size:10px;font-weight:700;letter-spacing:.1em;
+                 text-transform:uppercase;color:var(--fg3)}
+    .analyze-btn{
+      background:var(--accent);border:none;
+      padding:6px 16px;font-size:10px;font-weight:900;
+      letter-spacing:.1em;text-transform:uppercase;color:#fff;
+      cursor:pointer;transition:background .1s;white-space:nowrap;flex-shrink:0;
+    }
+    .analyze-btn:hover{background:var(--accent-h)}
+    .analyze-btn:disabled{background:#999;cursor:not-allowed}
+    .insight-box{
+      margin:0;padding:14px 18px;
+      border-top:1px solid var(--border-lt);
+      border-left:4px solid var(--accent);
+      background:var(--accent-lt);
+      font-size:13px;line-height:1.7;color:var(--fg);
+    }
+    .insight-label{
+      font-size:10px;font-weight:900;letter-spacing:.14em;
+      text-transform:uppercase;color:var(--accent);margin-bottom:6px;
+    }
+
+    /* ── FOLLOW-UPS ──────────────────────────────────────────────────── */
+    .followups{
+      padding:12px 18px;border-top:1px solid var(--border-lt);
+      background:var(--bg);
+    }
+    .followup-label{
+      font-size:10px;font-weight:700;letter-spacing:.12em;
+      text-transform:uppercase;color:var(--fg3);margin-bottom:7px;
+    }
+    .fchips{display:flex;flex-wrap:wrap;gap:5px}
+    .fchip{
+      background:var(--bg);border:1.5px solid var(--border-lt);
+      padding:4px 11px;font-size:10px;font-weight:600;
+      letter-spacing:.04em;text-transform:uppercase;
+      cursor:pointer;color:var(--fg2);
+      transition:border-color .1s,background .1s,color .1s;user-select:none;
+    }
+    .fchip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-lt)}
+
+    /* ── PAGINATION ──────────────────────────────────────────────────── */
+    .pager{
+      display:flex;align-items:center;justify-content:center;
+      gap:0;padding:10px 18px;border-top:1px solid var(--border-lt);
+    }
+    .pbtn{
+      background:var(--bg);border:1.5px solid var(--border);
+      padding:5px 12px;font-size:10px;font-weight:700;
+      letter-spacing:.08em;text-transform:uppercase;
+      color:var(--fg);cursor:pointer;
+      transition:background .1s,color .1s;
+      margin-left:-1.5px;
+    }
+    .pbtn:first-child{margin-left:0}
+    .pbtn:hover:not(:disabled){background:var(--fg);color:var(--bg)}
+    .pbtn:disabled{opacity:.3;cursor:not-allowed}
+    .pbtn.cur{background:var(--accent);border-color:var(--accent);color:#fff}
+    .pinfo{font-size:12px;color:var(--fg3);padding:0 6px}
+
+    /* ── STATES ──────────────────────────────────────────────────────── */
+    .loading{
+      display:flex;align-items:center;gap:10px;
+      color:var(--fg3);font-size:13px;padding:28px 18px;
+    }
+    .spin{
+      width:16px;height:16px;border:2px solid var(--border-lt);
+      border-top-color:var(--accent);border-radius:50%;
+      animation:spin .7s linear infinite;flex-shrink:0;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .errbox{
+      border:2px solid var(--err);padding:14px 18px;
+      background:#FFF5F5;color:var(--err);font-size:13px;line-height:1.6;
+    }
+    .errbox strong{display:block;margin-bottom:3px;font-size:14px;font-weight:700}
+    .empty{
+      display:flex;flex-direction:column;align-items:center;gap:8px;
+      padding:36px 18px;color:var(--fg3);font-size:12px;
+      text-align:center;border-top:2px solid var(--border);
+    }
+    .eico{font-size:22px;opacity:.25;font-weight:900}
+    .empty-head{font-size:12px;font-weight:700;letter-spacing:.08em;
+                text-transform:uppercase;color:var(--fg2)}
+    .ehint{font-size:11px;color:var(--fg3)}
+
+    /* ── BLOCK FEED ──────────────────────────────────────────────────── */
+    .feed-box{border:2px solid var(--border)}
+    .feed-hd{
+      background:var(--fg);color:var(--bg);
+      padding:10px 14px;
+      display:flex;align-items:center;justify-content:space-between;
+    }
+    .feed-hd-title{
+      font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;
+    }
+    .live-dot{
+      width:7px;height:7px;border-radius:50%;background:var(--ok);
+      animation:pg 1.6s ease-in-out infinite;
+    }
+    .feed-list{max-height:360px;overflow-y:auto}
+    .fi{
+      padding:9px 14px;border-bottom:1px solid var(--border-lt);
+      display:flex;align-items:center;gap:10px;
+      transition:background .1s;cursor:default;
+    }
+    .fi:last-child{border-bottom:none}
+    .fi:hover{background:var(--muted)}
+    .fi-num{
+      font-family:var(--mono);font-size:12px;font-weight:700;
+      color:var(--fg);min-width:50px;
+    }
+    .fi-badge{
+      font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+      padding:2px 7px;border:1px solid var(--border-lt);color:var(--fg3);
+    }
+    .fi-badge.active{border-color:var(--accent);color:var(--accent);background:var(--accent-lt)}
+    .fi-age{font-size:10px;color:var(--fg3);margin-left:auto;font-family:var(--mono)}
+
+    /* ── ADDRESS MODAL ───────────────────────────────────────────────── */
+    .moverlay{
+      display:none;position:fixed;inset:0;
+      background:rgba(0,0,0,.55);
+      z-index:200;align-items:center;justify-content:center;padding:24px;
+    }
+    .mbox{
+      background:var(--bg);border:2px solid var(--border);
+      width:100%;max-width:540px;max-height:90vh;
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    .mhd{
+      background:var(--fg);color:var(--bg);padding:12px 18px;
+      display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+    }
+    .mtitle{font-size:11px;font-weight:900;letter-spacing:.1em;
+            text-transform:uppercase;font-family:var(--mono)}
+    .mclose{
+      background:none;border:none;color:#aaa;cursor:pointer;
+      font-size:18px;line-height:1;padding:2px 4px;
+      transition:color .1s;
+    }
+    .mclose:hover{color:#fff}
+    .mbody{padding:18px;overflow-y:auto}
+    .mstats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+    .ms{background:var(--muted);border:1px solid var(--border-lt);padding:10px 12px}
+    .msl{font-size:10px;font-weight:700;letter-spacing:.1em;
+         text-transform:uppercase;color:var(--fg3)}
+    .msv{font-size:18px;font-weight:900;color:var(--fg);
+         font-family:var(--mono);margin-top:3px}
+    .maddr{
+      font-family:var(--mono);font-size:11px;color:var(--fg2);
+      word-break:break-all;border:1.5px solid var(--border-lt);
+      padding:8px 10px;margin-bottom:14px;
+      display:flex;align-items:flex-start;gap:6px;background:var(--muted);
+    }
+    .maddr span{flex:1}
+    .mchart-wrap{height:140px;margin:10px 0}
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="hd-logo">
+    <div class="hd-logo-sq"></div>
+    <h1>Portaldot Analyst</h1>
+  </div>
+  <div class="hd-mid">
+    <span class="hd-sub">AI-powered onchain data intelligence</span>
+  </div>
+  <div class="hd-right">
+    <span class="sdot" id="sdot"></span>
+    <span id="stext">checking…</span>
+    <span id="blockNum"></span>
+    <a href="/" style="margin-left:16px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#777;text-decoration:none;padding:4px 10px;border:1px solid #333;transition:color .1s,border-color .1s" onmouseover="this.style.color='#fff';this.style.borderColor='#fff'" onmouseout="this.style.color='#777';this.style.borderColor='#333'">← Home</a>
+  </div>
+</header>
+
+<!-- ── DASHBOARD ── -->
+<div class="dash">
+  <div class="dtile accent-tile">
+    <div class="dl">Latest Block</div>
+    <div class="dv" id="dBlock">—</div>
+    <div class="ds">Dev node</div>
+  </div>
+  <div class="dtile">
+    <div class="dl">Total Supply</div>
+    <div class="dv" id="dSupply">—</div>
+    <div class="ds">POT tokens</div>
+  </div>
+  <div class="dtile">
+    <div class="dl">Queries Run</div>
+    <div class="dv" id="dQueries">0</div>
+    <div class="ds">This session</div>
+  </div>
+  <div class="dtile">
+    <div class="dl">Cache Hits</div>
+    <div class="dv" id="dCache">0</div>
+    <div class="ds">Saved chain calls</div>
+  </div>
+</div>
+
+<!-- ── MAIN GRID ── -->
+<div class="pgrid">
+
+  <!-- Query column -->
+  <div class="qcol">
+    <div class="slabel"><span class="slabel-num">01.</span>Quick Queries</div>
+    <div class="chips">
+      <div class="chip" onclick="ask(this.textContent)">Top 20 POT holders</div>
+      <div class="chip" onclick="ask(this.textContent)">Total token supply</div>
+      <div class="chip" onclick="ask(this.textContent)">Largest transfers blocks 1 to 500</div>
+      <div class="chip" onclick="ask(this.textContent)">Transfer volume blocks 1 to 100</div>
+      <div class="chip" onclick="ask(this.textContent)">Token concentration top 10</div>
+      <div class="chip" onclick="ask(this.textContent)">Network activity last 30 blocks</div>
+      <div class="chip" onclick="ask(this.textContent)">Show stale multisig approvals</div>
+      <div class="chip" onclick="ask(this.textContent)">Who has the most locked POT in pending multisigs</div>
+      <div class="chip" onclick="ask(this.textContent)">Show remark logs blocks 1 to 50</div>
+      <div class="chip" onclick="ask(this.textContent)">Average block time last 20 blocks</div>
+      <div class="chip" onclick="ask(this.textContent)">Fee stats blocks 1 to 100</div>
+      <div class="chip" onclick="ask(this.textContent)">Block details block 5</div>
+      <div class="chip" onclick="ask(this.textContent)">How many active addresses blocks 1 to 100</div>
+      <div class="chip" onclick="ask(this.textContent)">New accounts created blocks 1 to 200</div>
+      <div class="chip" onclick="ask(this.textContent)">Multisig activity blocks 1 to 100</div>
+    </div>
+
+    <div class="slabel" style="margin-bottom:0"><span class="slabel-num">02.</span>Query</div>
+    <div style="height:8px"></div>
+    <div class="irow">
+      <input type="text" id="qi"
+        placeholder="Ask anything — e.g. who are the top 10 wealthiest wallets  (↵ Enter)" />
+      <button id="runBtn" onclick="run()">Run</button>
+    </div>
+    <div class="ihint">Tip: mention block ranges ("blocks 1 to 200"), addresses, or just ask naturally.</div>
+
+    <div id="histRow"></div>
+    <div id="output"></div>
+  </div>
+
+  <!-- Block feed -->
+  <div class="feed-col">
+    <div class="slabel"><span class="slabel-num">03.</span>Live Blocks</div>
+    <div class="feed-box">
+      <div class="feed-hd">
+        <span class="feed-hd-title">Block Feed</span>
+        <span class="live-dot" id="liveDot"></span>
+      </div>
+      <div class="feed-list" id="feedList">
+        <div class="fi"><span style="font-size:11px;color:#aaa;padding:4px 0">Connecting…</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── ADDRESS MODAL ── -->
+<div class="moverlay" id="addrModal" onclick="if(event.target===this)closeModal()">
+  <div class="mbox">
+    <div class="mhd">
+      <span class="mtitle" id="mTitle">Address Profile</span>
+      <button class="mclose" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mbody" id="mBody">
+      <div class="loading"><div class="spin"></div><span>Loading profile…</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API     = window.PORTALDOT_API_URL || 'http://localhost:8080';
+const PG_SIZE = 25;
+const COLORS  = ['#1E3FAF','#1D4ED8','#2563EB','#374151','#3B82F6','#4B5563','#60A5FA','#6B7280'];
+
+let qHistory   = [];
+let qCounter   = 0;
+let cacheHits  = 0;
+let curRows    = [];
+let curKeys    = [];
+let curPage    = 1;
+let sortK      = null;
+let sortD      = 'asc';
+let curFn      = '';
+let _chart     = null;
+let _addrChart = null;
+let feedBlocks = [];
+
+function _initChartDefaults() {
+  if (typeof Chart === 'undefined') return false;
+  Chart.defaults.color       = '#555555';
+  Chart.defaults.borderColor = '#E8E8E8';
+  return true;
+}
+
+function baseOpts(scales = true) {
+  const o = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: '#555', font: { size: 11 }, boxWidth: 12 } },
+      tooltip: { backgroundColor: '#000', titleColor: '#fff', bodyColor: '#ddd',
+                 borderColor: '#000', borderWidth: 1 }
+    }
+  };
+  if (scales) o.scales = {
+    x: { ticks:{ color:'#777', font:{size:11} }, grid:{ color:'#F0F0F0' } },
+    y: { ticks:{ color:'#777', font:{size:11} }, grid:{ color:'#F0F0F0' } }
+  };
+  return o;
+}
+
+// ── Status + dashboard polling ─────────────────────────────────────────────
+async function pollStatus() {
+  try {
+    const j = await (await fetch(`${API}/health`)).json();
+    const ok = j.status === 'ok';
+    document.getElementById('sdot').className   = 'sdot ' + (ok ? 'ok' : 'err');
+    document.getElementById('stext').textContent = ok ? 'Connected' : 'Offline';
+    document.getElementById('blockNum').textContent = ok ? `· #${j.latest_block}` : '';
+  } catch {
+    document.getElementById('sdot').className    = 'sdot err';
+    document.getElementById('stext').textContent  = 'Offline';
+    document.getElementById('blockNum').textContent = '';
+  }
+}
+
+async function pollDash() {
+  try {
+    const j = await (await fetch(`${API}/stats`)).json();
+    if (j.latest_block != null) document.getElementById('dBlock').textContent = `#${j.latest_block}`;
+    if (j.total_supply_pot != null) document.getElementById('dSupply').textContent = fmtNum(j.total_supply_pot);
+  } catch {}
+}
+
+async function pollFeed() {
+  try {
+    const j = await (await fetch(`${API}/blocks/recent?count=8`)).json();
+    const blocks = j.blocks || [];
+    const now = Date.now();
+    const newOnes = blocks.filter(b => !feedBlocks.find(fb => fb.number === b.number));
+    if (newOnes.length || feedBlocks.length === 0) { feedBlocks = blocks; renderFeed(now); }
+  } catch {}
+}
+
+function renderFeed(now) {
+  const el = document.getElementById('feedList');
+  if (!feedBlocks.length) { el.innerHTML = '<div class="fi"><span style="font-size:11px;color:#aaa">No blocks yet</span></div>'; return; }
+  el.innerHTML = feedBlocks.map(b => {
+    const ago = b.timestamp_ms ? Math.round((now - b.timestamp_ms) / 1000) : null;
+    return `<div class="fi">
+      <span class="fi-num">#${b.number}</span>
+      <span class="fi-badge ${b.extrinsic_count > 1 ? 'active' : ''}">${b.extrinsic_count} tx</span>
+      <span class="fi-age">${ago != null ? ago + 's' : ''}</span>
+    </div>`;
+  }).join('');
+}
+
+pollStatus();
+setTimeout(pollDash, 2000);
+setTimeout(pollFeed, 4000);
+setInterval(pollStatus, 12000);
+setInterval(pollDash,  30000);
+setInterval(pollFeed,  15000);
+
+// ── History ────────────────────────────────────────────────────────────────
+function pushHistory(t) {
+  qHistory = [t, ...qHistory.filter(h => h !== t)].slice(0, 6);
+  const el = document.getElementById('histRow');
+  if (!qHistory.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="hlabel">Recent</div><div class="hchips">
+    ${qHistory.map(h => `<div class="hchip" title="${esc(h)}" data-q="${esc(h)}" onclick="ask(this.dataset.q)">${esc(h)}</div>`).join('')}
+  </div><div style="height:18px"></div>`;
+}
+
+// ── Query ──────────────────────────────────────────────────────────────────
+function ask(t) { document.getElementById('qi').value = t; run(); }
+
+async function run() {
+  const text = document.getElementById('qi').value.trim();
+  if (!text) return;
+  const btn = document.getElementById('runBtn');
+  const out = document.getElementById('output');
+  btn.disabled = true;
+  out.innerHTML = `<div class="loading"><div class="spin"></div><span>Asking Gemma + querying chain…</span></div>`;
+  pushHistory(text);
+  try {
+    const resp = await fetch(`${API}/query`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({text})
+    });
+    const json = await resp.json();
+    if (!resp.ok) throw new Error(json.detail || `HTTP ${resp.status}`);
+    qCounter++;
+    document.getElementById('dQueries').textContent = qCounter;
+    if (json.from_cache) { cacheHits++; document.getElementById('dCache').textContent = cacheHits; }
+    render(json);
+  } catch(err) {
+    out.innerHTML = `<div class="errbox"><strong>Query Failed</strong>${esc(err.message)}</div>`;
+  } finally { btn.disabled = false; }
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+const CHART_FNS = new Set(['get_network_stats','get_top_holders','get_token_concentration',
+  'get_transfer_history','get_largest_transfers','get_stale_multisigs']);
+
+const EMPTY_HINTS = {
+  get_stale_multisigs:   'No stale multisig proposals found.',
+  get_remark_logs:       'No remark_with_event extrinsics in this range.',
+  get_new_accounts:      'No new accounts created in this range.',
+  get_multisig_activity: 'No multisig events found in this range.',
+  get_transfer_history:  'No transfers found in this range.',
+  get_largest_transfers: 'No transfers found in this range.',
+};
+
+const FOLLOWUPS = {
+  get_top_holders:         ['Token concentration top 10','Total token supply','Transfer volume blocks 1 to 200'],
+  get_token_concentration: ['Top 20 POT holders','Total token supply'],
+  get_transfer_history:    ['Largest transfers blocks 1 to 500','Transfer volume blocks 1 to 100'],
+  get_largest_transfers:   ['Transfer volume blocks 1 to 100','Top 20 POT holders'],
+  get_stale_multisigs:     ['Who has the most locked POT in pending multisigs','Multisig activity blocks 1 to 100'],
+  get_richest_multisig:    ['Show stale multisig approvals','Multisig activity blocks 1 to 100'],
+  get_network_stats:       ['Average block time last 20 blocks','Fee stats blocks 1 to 100'],
+  get_total_supply:        ['Token concentration top 10','Top 20 POT holders'],
+  get_remark_logs:         ['Network activity last 30 blocks','Block details block 5'],
+  get_fee_stats:           ['Average block time last 20 blocks','Network activity last 30 blocks'],
+};
+
+function render({ question, plan, data, onchain_log, elapsed_ms, from_cache }) {
+  const rows = Array.isArray(data) ? data : (data ? [data] : []);
+  curRows = rows; curPage = 1; sortK = null; sortD = 'asc';
+  curFn = plan.function;
+  curKeys = rows.length ? Object.keys(rows[0]) : [];
+
+  const pStr = plan.params && Object.keys(plan.params).length
+    ? '(' + Object.entries(plan.params).map(([k,v]) => `${k}=${JSON.stringify(v)}`).join(', ') + ')'
+    : '()';
+
+  let badge = '';
+  if (onchain_log?.extrinsic_hash) {
+    badge = `<div class="cbadge" title="${esc(onchain_log.extrinsic_hash)}">
+      <span class="cdot"></span>On-chain &nbsp;·&nbsp;
+      <span class="chash" onclick="copyTxt('${esc(onchain_log.extrinsic_hash)}',this)">
+        tx ${esc(onchain_log.extrinsic_hash.slice(0,18))}…
+      </span></div>`;
+  }
+
+  const header = `<div class="rheader">
+    <div class="rq">${esc(question)}</div>
+    <div class="rfn">${esc(plan.function)}${esc(pStr)}</div>
+    <div class="metarow">
+      <span class="mpill">Query <span class="mv">#${qCounter}</span></span>
+      ${elapsed_ms != null ? `<span class="mpill">Time <span class="mv">${elapsed_ms}ms</span></span>` : ''}
+      ${from_cache ? `<span class="mpill cached">⚡ Cached</span>` : ''}
+      ${badge}
+    </div></div>`;
+
+  const out = document.getElementById('output');
+
+  if (!rows.length) {
+    const hint = EMPTY_HINTS[plan.function] || 'No data returned for this query.';
+    out.innerHTML = `<div class="rbox">${header}
+      <div class="empty">
+        <div class="eico">◻</div>
+        <div class="empty-head">${esc(hint)}</div>
+        <div class="ehint">Try widening the block range or re-seeding demo data.</div>
+      </div></div>`;
+    return;
+  }
+
+  const showChart  = CHART_FNS.has(plan.function);
+  const followups  = FOLLOWUPS[plan.function] || [];
+
+  out.innerHTML = `<div class="rbox" id="rbox">
+    ${header}
+    <div id="tarea"></div>
+    ${showChart ? `<div class="chart-wrap"><canvas id="qchart"></canvas></div>` : ''}
+    <div class="ai-bar">
+      <span class="ai-bar-hint">✦ Gemma can interpret this data</span>
+      <button class="analyze-btn" id="analyzeBtn" onclick="analyzeResult()">Analyze with AI</button>
+    </div>
+    <div id="insightArea"></div>
+    ${followups.length ? `
+      <div class="followups">
+        <div class="followup-label">Suggested follow-ups</div>
+        <div class="fchips">${followups.map(f =>
+          `<div class="fchip" onclick="ask(this.textContent)">${esc(f)}</div>`
+        ).join('')}</div>
+      </div>` : ''}
+  </div>`;
+
+  renderTable();
+  if (showChart) setTimeout(() => renderChart(plan.function, rows), 60);
+}
+
+// ── Table ──────────────────────────────────────────────────────────────────
+const ADDR_KEYS = new Set(['address','from','to','depositor','multisig','account','signer','actor','who']);
+const HASH_PAT  = /hash/i;
+
+function renderTable() {
+  if (!curRows.length) return;
+  const sorted = sortK
+    ? [...curRows].sort((a,b) => {
+        const [av,bv] = [a[sortK],b[sortK]];
+        const c = typeof av === 'number' ? av-bv : String(av).localeCompare(String(bv));
+        return sortD === 'asc' ? c : -c;
+      })
+    : curRows;
+
+  const total = Math.ceil(sorted.length / PG_SIZE);
+  const page  = sorted.slice((curPage-1)*PG_SIZE, curPage*PG_SIZE);
+  const numK  = new Set(curKeys.filter(k => curRows.every(r => typeof r[k] === 'number')));
+  const addrK = new Set(curKeys.filter(k => ADDR_KEYS.has(k)));
+  const hashK = new Set(curKeys.filter(k => HASH_PAT.test(k)));
+
+  const thead = `<tr>${curKeys.map(k => {
+    const a = k === sortK;
+    return `<th class="${a ? sortD : ''}" onclick="sortBy('${k}')">
+      ${esc(k.replace(/_/g,' '))} <span class="sa"></span></th>`;
+  }).join('')}</tr>`;
+
+  const tbody = page.map((row, ri) =>
+    `<tr style="animation-delay:${ri*12}ms">${curKeys.map(k => {
+      const v = row[k] ?? '';
+      const sv = String(v);
+      const isA = addrK.has(k), isH = hashK.has(k);
+      let cls = numK.has(k) ? 'num' : isA ? 'addr' : isH ? 'hash' : '';
+      const disp = (isA || isH) ? shortA(sv) : fmtVal(k, v);
+      if (isA || isH) {
+        return `<td class="${cls}" title="${esc(sv)}">
+          <div class="ccell"><span>${esc(disp)}</span>
+          <button class="cpbtn" onclick="copyTxt('${esc(sv)}',this)" title="Copy">⎘</button>
+          ${isA ? `<button class="cpbtn" onclick="openAddr('${esc(sv)}')" title="Profile">↗</button>` : ''}
+          </div></td>`;
+      }
+      return `<td class="${cls}" title="${esc(sv)}">${esc(disp)}</td>`;
+    }).join('')}</tr>`
+  ).join('');
+
+  const toolbar = `<div class="ttbar">
+    <span class="rowcnt">${curRows.length} row${curRows.length!==1?'s':''}</span>
+    <div class="ebtns">
+      <button class="ebtn" onclick="expCSV()">↓ CSV</button>
+      <button class="ebtn" onclick="expJSON()">↓ JSON</button>
+    </div></div>`;
+
+  let pager = '';
+  if (total > 1) {
+    const ps = pgRange(curPage, total);
+    pager = `<div class="pager">
+      <button class="pbtn" onclick="goP(${curPage-1})" ${curPage===1?'disabled':''}>← Prev</button>
+      ${ps.map(p => p==='…'
+        ? `<span class="pinfo">…</span>`
+        : `<button class="pbtn ${p===curPage?'cur':''}" onclick="goP(${p})">${p}</button>`).join('')}
+      <button class="pbtn" onclick="goP(${curPage+1})" ${curPage===total?'disabled':''}>Next →</button>
+    </div>`;
+  }
+
+  document.getElementById('tarea').innerHTML =
+    `${toolbar}<div class="twrap"><table><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>${pager}`;
+}
+
+function sortBy(k) { sortD = (sortK===k&&sortD==='asc')?'desc':'asc'; sortK=k; curPage=1; renderTable(); }
+function goP(p) { const t=Math.ceil(curRows.length/PG_SIZE); if(p<1||p>t)return; curPage=p; renderTable(); }
+function pgRange(c,t) {
+  if(t<=7) return Array.from({length:t},(_,i)=>i+1);
+  if(c<=4) return [1,2,3,4,5,'…',t];
+  if(c>=t-3) return [1,'…',t-4,t-3,t-2,t-1,t];
+  return [1,'…',c-1,c,c+1,'…',t];
+}
+
+// ── Charts ─────────────────────────────────────────────────────────────────
+function renderChart(fn, rows) {
+  if (!_initChartDefaults()) return;
+  if (_chart) { _chart.destroy(); _chart = null; }
+  const canvas = document.getElementById('qchart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  if (fn === 'get_network_stats') {
+    _chart = new Chart(ctx, { type:'line', data:{
+      labels: rows.map(r=>`#${r.block}`),
+      datasets:[{ label:'Extrinsics',data:rows.map(r=>r.extrinsic_count),
+        borderColor:'#1E3FAF',backgroundColor:'rgba(30,63,175,.07)',
+        fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#1E3FAF' }]
+    }, options: baseOpts() });
+  } else if (fn==='get_top_holders'||fn==='get_token_concentration') {
+    const top=rows.slice(0,7), rest=rows.slice(7);
+    const labs=[...top.map(r=>shortChart(r.address)), ...(rest.length?[`Others (${rest.length})`]:[])];
+    const vals=[...top.map(r=>r.total_pot), ...(rest.length?[rest.reduce((s,r)=>s+r.total_pot,0)]:[])];
+    _chart = new Chart(ctx, { type:'doughnut', data:{
+      labels:labs, datasets:[{data:vals,backgroundColor:COLORS,borderColor:'#fff',borderWidth:3}]
+    }, options:{...baseOpts(false),cutout:'58%',
+      plugins:{legend:{position:'right',labels:{color:'#555',font:{size:10},boxWidth:10}},
+               tooltip:baseOpts(false).plugins.tooltip}} });
+  } else if (fn==='get_transfer_history'||fn==='get_largest_transfers') {
+    const shown=rows.slice(0,20);
+    _chart = new Chart(ctx, { type:'bar', data:{
+      labels:shown.map((_,i)=>`#${i+1}`),
+      datasets:[{label:'Amount (POT)',data:shown.map(r=>r.amount??r.amount_pot??0),
+        backgroundColor:'rgba(30,63,175,.7)',borderColor:'#1E3FAF',borderWidth:1,borderRadius:0}]
+    }, options: baseOpts() });
+  } else if (fn==='get_stale_multisigs') {
+    _chart = new Chart(ctx, { type:'bar', data:{
+      labels:rows.map(r=>shortChart(r.multisig)),
+      datasets:[{label:'Age (blocks)',data:rows.map(r=>r.age_blocks),
+        backgroundColor:'rgba(220,38,38,.65)',borderColor:'#DC2626',borderWidth:1,borderRadius:0}]
+    }, options:{...baseOpts(),indexAxis:'y'} });
+  }
+}
+
+// ── AI Analysis ────────────────────────────────────────────────────────────
+async function analyzeResult() {
+  const btn  = document.getElementById('analyzeBtn');
+  const area = document.getElementById('insightArea');
+  if (!btn || !curRows.length) return;
+  btn.disabled = true; btn.textContent = 'Analyzing…';
+  area.innerHTML = `<div class="loading" style="padding:12px 18px"><div class="spin"></div><span>Gemma is reading the data…</span></div>`;
+  try {
+    const resp = await fetch(`${API}/analyze`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ fn_name:curFn, data:curRows.slice(0,15), question:document.getElementById('qi').value })
+    });
+    const j = await resp.json();
+    if (!resp.ok) throw new Error(j.detail || 'Analysis failed');
+    area.innerHTML = `<div class="insight-box">
+      <div class="insight-label">✦ AI Analysis</div>
+      ${esc(j.insight)}
+    </div>`;
+  } catch(e) {
+    area.innerHTML = `<div class="errbox" style="margin:0"><strong>Analysis failed</strong>${esc(e.message)}</div>`;
+  } finally { btn.disabled=false; btn.textContent='Re-analyze'; }
+}
+
+// ── Address modal ──────────────────────────────────────────────────────────
+async function openAddr(addr) {
+  document.getElementById('mTitle').textContent = shortA(addr);
+  document.getElementById('mBody').innerHTML =
+    `<div class="loading"><div class="spin"></div><span>Loading profile…</span></div>`;
+  document.getElementById('addrModal').style.display = 'flex';
+  try {
+    const j = await (await fetch(`${API}/address/${encodeURIComponent(addr)}`)).json();
+    renderModal(addr, j);
+  } catch(e) {
+    document.getElementById('mBody').innerHTML =
+      `<div class="errbox"><strong>Error</strong>${esc(e.message)}</div>`;
+  }
+}
+function closeModal() {
+  document.getElementById('addrModal').style.display='none';
+  if(_addrChart){_addrChart.destroy();_addrChart=null;}
+}
+function renderModal(addr, d) {
+  const b=d.balance, h=d.history||[];
+  const sent=h.filter(x=>x.direction==='sent'), recv=h.filter(x=>x.direction==='received');
+  document.getElementById('mBody').innerHTML=`
+    <div class="mstats">
+      <div class="ms"><div class="msl">Free</div><div class="msv">${fmtNum(b.free_pot)}</div></div>
+      <div class="ms"><div class="msl">Reserved</div><div class="msv">${fmtNum(b.reserved_pot)}</div></div>
+      <div class="ms"><div class="msl">Total POT</div><div class="msv">${fmtNum(b.total_pot)}</div></div>
+      <div class="ms"><div class="msl">Nonce</div><div class="msv">${d.nonce}</div></div>
+    </div>
+    <div class="maddr"><span>${esc(addr)}</span>
+      <button class="cpbtn" onclick="copyTxt('${esc(addr)}',this)">⎘</button>
+    </div>
+    ${h.length?`
+      <div class="slabel" style="margin-bottom:8px"><span class="slabel-num">TX.</span>Transfer History (${h.length})</div>
+      <div class="mchart-wrap"><canvas id="addrChart"></canvas></div>
+      <div class="twrap" style="max-height:160px;overflow-y:auto;margin-top:8px">
+        <table><thead><tr><th>Dir</th><th>Amount POT</th><th>Counterpart</th></tr></thead>
+        <tbody>${h.slice(0,15).map(x=>`<tr>
+          <td style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:.08em;color:${x.direction==='received'?'var(--ok)':'var(--err)'}">${x.direction}</td>
+          <td class="num">${fmtNum(x.amount)}</td>
+          <td class="addr" title="${esc(x.direction==='received'?x.from:x.to)}">${shortA(x.direction==='received'?x.from:x.to)}</td>
+        </tr>`).join('')}</tbody></table>
+      </div>`
+      :`<div class="empty"><div class="eico">◻</div><div class="empty-head">No transfer history found.</div></div>`}`;
+  if(h.length) {
+    setTimeout(()=>{
+      if(!_initChartDefaults()) return;
+      const ctx=document.getElementById('addrChart')?.getContext('2d');
+      if(!ctx) return;
+      const shown=h.slice(0,15);
+      _addrChart=new Chart(ctx,{type:'bar',data:{
+        labels:shown.map((_,i)=>`#${i+1}`),
+        datasets:[{label:'POT',data:shown.map(x=>x.amount),
+          backgroundColor:shown.map(x=>x.direction==='received'?'rgba(22,163,74,.65)':'rgba(220,38,38,.65)'),
+          borderColor:shown.map(x=>x.direction==='received'?'#16A34A':'#DC2626'),
+          borderWidth:1,borderRadius:0}]
+      },options:{...baseOpts(),plugins:{legend:{display:false},tooltip:baseOpts().plugins.tooltip}}});
+    },60);
+  }
+}
+
+// ── Export ─────────────────────────────────────────────────────────────────
+function expCSV() {
+  const hdr=curKeys.join(',');
+  const rows=curRows.map(r=>curKeys.map(k=>{const v=String(r[k]??'');return(v.includes(',')||v.includes('"'))?`"${v.replace(/"/g,'""')}"`:`${v}`}).join(','));
+  dl([hdr,...rows].join('\n'),'portaldot-query.csv','text/csv');
+}
+function expJSON(){dl(JSON.stringify(curRows,null,2),'portaldot-query.json','application/json')}
+function dl(c,name,mime){const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([c],{type:mime})),download:name});a.click();URL.revokeObjectURL(a.href)}
+
+// ── Copy ───────────────────────────────────────────────────────────────────
+function copyTxt(t,btn){
+  navigator.clipboard.writeText(t).then(()=>{
+    if(btn){btn.classList.add('ok');btn.textContent='✓';
+      setTimeout(()=>{btn.classList.remove('ok');btn.textContent='⎘'},1400);}
+  });
+}
+
+// ── Format ─────────────────────────────────────────────────────────────────
+function shortA(s){s=String(s);return s.length>16?s.slice(0,8)+'…'+s.slice(-6):s}
+function shortChart(s){s=String(s);return s.length>10?s.slice(0,7)+'…':s}
+function fmtNum(n){
+  if(typeof n!=='number') return String(n);
+  return Number.isInteger(n)?n.toLocaleString():n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4});
+}
+function fmtVal(k,v){if(typeof v==='number')return fmtNum(v);if(typeof v==='boolean')return v?'Yes':'No';return String(v)}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// ── Keyboard ───────────────────────────────────────────────────────────────
+document.getElementById('qi').addEventListener('keydown',e=>{if(e.key==='Enter')run()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+</script>
+<script src="/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</body>
+</html>

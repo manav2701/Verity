@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portaldot Onchain Analyst</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #FFFFFF;
+      --muted:   #F4F4F4;
+      --muted2:  #E8E8E8;
+      --fg:      #000000;
+      --fg2:     #333333;
+      --fg3:     #666666;
+      --accent:  #1E3FAF;
+      --accent-h:#162E85;
+      --accent-lt:#EEF2FF;
+      --border:  #000000;
+      --border-lt:#D8D8D8;
+      --mono:    'SF Mono','Consolas','Courier New',monospace;
+      --sans:    'Inter',sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{font-size:14px;scroll-behavior:smooth}
+    body{
+      font-family:var(--sans);background:var(--bg);color:var(--fg);
+      background-image:
+        linear-gradient(rgba(0,0,0,.022) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(0,0,0,.022) 1px,transparent 1px);
+      background-size:24px 24px;
+    }
+
+    /* ── HEADER ── */
+    header{
+      background:var(--fg);color:var(--bg);
+      padding:0 40px;display:flex;align-items:center;
+      height:52px;border-bottom:2px solid var(--border);
+      position:sticky;top:0;z-index:100;
+    }
+    .hd-logo{display:flex;align-items:center;gap:10px}
+    .hd-sq{width:24px;height:24px;background:var(--accent);flex-shrink:0}
+    .hd-name{
+      font-size:12px;font-weight:900;letter-spacing:.14em;
+      text-transform:uppercase;
+    }
+    .hd-nav{margin-left:auto;display:flex;align-items:center;gap:0}
+    .hd-link{
+      color:#999;font-size:11px;font-weight:700;
+      letter-spacing:.1em;text-transform:uppercase;
+      padding:0 18px;height:52px;display:flex;align-items:center;
+      text-decoration:none;border-left:1px solid #333;
+      transition:color .15s,background .15s;
+    }
+    .hd-link:hover{color:#fff;background:#111}
+    .hd-btn{
+      background:var(--accent);color:#fff;
+      font-size:11px;font-weight:900;letter-spacing:.1em;
+      text-transform:uppercase;padding:0 22px;
+      height:52px;display:flex;align-items:center;
+      text-decoration:none;border-left:1px solid #333;
+      transition:background .15s;
+    }
+    .hd-btn:hover{background:var(--accent-h)}
+
+    /* ── HERO ── */
+    .hero{
+      border-bottom:2px solid var(--border);
+      display:grid;grid-template-columns:1fr 420px;
+      min-height:calc(100vh - 52px);
+    }
+    .hero-left{
+      padding:60px 40px 60px;
+      display:flex;flex-direction:column;justify-content:center;
+      border-right:2px solid var(--border);
+    }
+    .hero-eyebrow{
+      font-size:10px;font-weight:700;letter-spacing:.2em;
+      text-transform:uppercase;color:var(--accent);
+      margin-bottom:24px;display:flex;align-items:center;gap:10px;
+    }
+    .hero-eyebrow::after{content:'';flex:1;height:1px;background:var(--border-lt)}
+    .hero-h1{
+      font-size:clamp(52px,7vw,86px);font-weight:900;
+      line-height:.95;letter-spacing:-.02em;
+      text-transform:uppercase;color:var(--fg);
+      margin-bottom:32px;
+    }
+    .hero-h1 em{font-style:normal;color:var(--accent)}
+    .hero-desc{
+      font-size:16px;line-height:1.65;color:var(--fg2);
+      max-width:500px;margin-bottom:40px;font-weight:400;
+    }
+    .hero-desc strong{color:var(--fg);font-weight:700}
+    .hero-cta{display:flex;align-items:center;gap:0}
+    .btn-primary{
+      background:var(--fg);color:var(--bg);
+      font-size:12px;font-weight:900;letter-spacing:.12em;
+      text-transform:uppercase;padding:16px 32px;
+      text-decoration:none;border:2px solid var(--fg);
+      transition:background .1s,color .1s;
+      display:inline-flex;align-items:center;gap:10px;
+    }
+    .btn-primary:hover{background:var(--accent);border-color:var(--accent)}
+    .btn-primary .arr{
+      font-size:16px;transition:transform .15s;display:inline-block;
+    }
+    .btn-primary:hover .arr{transform:translateX(4px)}
+    .btn-secondary{
+      background:transparent;color:var(--fg3);
+      font-size:11px;font-weight:700;letter-spacing:.1em;
+      text-transform:uppercase;padding:16px 24px;
+      text-decoration:none;border:2px solid var(--border-lt);
+      border-left:none;transition:color .1s,border-color .1s;
+    }
+    .btn-secondary:hover{color:var(--fg);border-color:var(--fg)}
+
+    /* ── HERO RIGHT (preview panel) ── */
+    .hero-right{
+      padding:40px 32px;display:flex;flex-direction:column;
+      justify-content:center;gap:16px;
+      background:var(--muted);
+      background-image:radial-gradient(rgba(0,0,0,.06) 1px,transparent 1px);
+      background-size:16px 16px;
+      background-color:var(--muted);
+    }
+    .preview-label{
+      font-size:10px;font-weight:700;letter-spacing:.16em;
+      text-transform:uppercase;color:var(--fg3);margin-bottom:4px;
+    }
+    .preview-input{
+      background:var(--bg);border:2px solid var(--border);
+      padding:12px 14px;font-size:12px;font-family:var(--mono);
+      color:var(--fg);display:flex;align-items:center;gap:8px;
+    }
+    .preview-input .pi-prompt{color:var(--accent);font-weight:700}
+    .preview-result{
+      background:var(--bg);border:2px solid var(--border);
+      overflow:hidden;
+    }
+    .pr-head{
+      background:var(--fg);color:var(--bg);
+      padding:8px 12px;font-size:10px;
+      display:flex;align-items:center;justify-content:space-between;
+    }
+    .pr-fn{font-family:var(--mono);letter-spacing:.03em}
+    .pr-meta{display:flex;gap:8px}
+    .pr-pill{
+      border:1px solid #444;padding:1px 6px;font-size:9px;
+      font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    }
+    .pr-pill.c{border-color:var(--accent);color:#79b4ff}
+    table.prev{width:100%;border-collapse:collapse;font-size:11px}
+    table.prev th{
+      background:#F4F4F4;padding:7px 12px;text-align:left;
+      font-size:9px;font-weight:700;letter-spacing:.1em;
+      text-transform:uppercase;color:var(--fg3);
+      border-bottom:1px solid var(--border-lt);
+    }
+    table.prev td{
+      padding:7px 12px;border-bottom:1px solid #F0F0F0;
+      font-family:var(--mono);font-size:10px;
+    }
+    table.prev td.n{color:var(--accent);font-weight:700;text-align:right}
+    table.prev td.a{color:var(--fg2)}
+    table.prev tr:last-child td{border-bottom:none}
+
+    /* ── STATS BAR ── */
+    .stats-bar{
+      display:grid;grid-template-columns:repeat(4,1fr);
+      border-bottom:2px solid var(--border);
+    }
+    .stat{
+      padding:28px 32px;border-right:2px solid var(--border);
+      background:var(--bg);
+    }
+    .stat:last-child{border-right:none}
+    .stat-n{
+      font-size:42px;font-weight:900;line-height:1;
+      color:var(--fg);font-family:var(--mono);margin-bottom:8px;
+    }
+    .stat-n span{color:var(--accent)}
+    .stat-l{font-size:11px;font-weight:700;letter-spacing:.1em;
+             text-transform:uppercase;color:var(--fg3)}
+
+    /* ── SECTION COMMON ── */
+    .sec{border-bottom:2px solid var(--border)}
+    .sec-inner{max-width:1280px;margin:0 auto;padding:72px 40px}
+    .sec-num{
+      font-size:10px;font-weight:700;letter-spacing:.2em;
+      text-transform:uppercase;color:var(--accent);
+      margin-bottom:12px;
+    }
+    .sec-h{
+      font-size:clamp(28px,4vw,48px);font-weight:900;
+      line-height:1.05;letter-spacing:-.01em;
+      text-transform:uppercase;margin-bottom:32px;
+    }
+
+    /* ── PROBLEM SECTION ── */
+    .problem-grid{
+      display:grid;grid-template-columns:1fr 1fr;gap:0;
+      border:2px solid var(--border);
+    }
+    .problem-left{
+      padding:48px 40px;border-right:2px solid var(--border);
+      background:var(--fg);color:var(--bg);
+    }
+    .problem-quote{
+      font-size:clamp(20px,2.5vw,28px);font-weight:700;
+      line-height:1.35;margin-bottom:24px;
+    }
+    .problem-attr{
+      font-size:11px;font-weight:700;letter-spacing:.12em;
+      text-transform:uppercase;color:#666;
+    }
+    .problem-right{padding:48px 40px}
+    .problem-body{font-size:15px;line-height:1.75;color:var(--fg2);margin-bottom:20px}
+    .problem-body:last-child{margin-bottom:0}
+    .problem-body strong{color:var(--fg);font-weight:700}
+
+    /* ── HOW IT WORKS ── */
+    .steps{
+      display:grid;grid-template-columns:repeat(3,1fr);
+      border:2px solid var(--border);
+    }
+    .step{padding:40px 32px;border-right:2px solid var(--border)}
+    .step:last-child{border-right:none}
+    .step-n{
+      font-size:48px;font-weight:900;color:var(--accent);
+      font-family:var(--mono);line-height:1;margin-bottom:16px;
+    }
+    .step-h{
+      font-size:16px;font-weight:900;text-transform:uppercase;
+      letter-spacing:.06em;margin-bottom:10px;
+    }
+    .step-p{font-size:13px;line-height:1.65;color:var(--fg2)}
+    .step-arrow{
+      display:none; /* shown as border-right between steps */
+    }
+
+    /* ── CAPABILITIES ── */
+    .caps{
+      display:grid;grid-template-columns:repeat(3,1fr);
+      border:2px solid var(--border);
+    }
+    .cap{
+      padding:32px 28px;border-right:2px solid var(--border);
+      border-bottom:2px solid var(--border);
+      transition:background .1s;
+    }
+    .cap:nth-child(3),.cap:nth-child(6){border-right:none}
+    .cap:nth-child(4),.cap:nth-child(5),.cap:nth-child(6){border-bottom:none}
+    .cap:hover{background:var(--muted)}
+    .cap-icon{
+      width:40px;height:40px;background:var(--fg);
+      display:flex;align-items:center;justify-content:center;
+      margin-bottom:14px;font-size:18px;color:var(--bg);
+    }
+    .cap-icon.blue{background:var(--accent)}
+    .cap-h{
+      font-size:13px;font-weight:900;text-transform:uppercase;
+      letter-spacing:.08em;margin-bottom:8px;
+    }
+    .cap-p{font-size:12px;line-height:1.6;color:var(--fg3)}
+
+    /* ── TECH STACK ── */
+    .tech-grid{
+      display:grid;grid-template-columns:1fr 1fr;gap:0;
+      border:2px solid var(--border);
+    }
+    .tech-left{
+      padding:48px 40px;border-right:2px solid var(--border);
+      background:var(--muted);
+      background-image:
+        linear-gradient(rgba(0,0,0,.04) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(0,0,0,.04) 1px,transparent 1px);
+      background-size:24px 24px;
+      background-color:var(--muted);
+    }
+    .tech-arch{
+      font-family:var(--mono);font-size:11px;line-height:2;
+      color:var(--fg2);white-space:pre;
+    }
+    .tech-right{padding:48px 40px}
+    .tech-list{list-style:none;display:flex;flex-direction:column;gap:0}
+    .tech-item{
+      display:flex;align-items:center;gap:14px;
+      padding:16px 0;border-bottom:1px solid var(--border-lt);
+    }
+    .tech-item:last-child{border-bottom:none}
+    .tech-dot{
+      width:8px;height:8px;background:var(--accent);flex-shrink:0;
+    }
+    .tech-name{font-size:13px;font-weight:700;text-transform:uppercase;
+               letter-spacing:.08em;min-width:160px}
+    .tech-desc{font-size:12px;color:var(--fg3)}
+
+    /* ── FINAL CTA ── */
+    .final-cta{
+      background:var(--fg);color:var(--bg);
+      padding:80px 40px;
+      display:flex;flex-direction:column;align-items:center;
+      text-align:center;gap:24px;
+    }
+    .final-eyebrow{
+      font-size:10px;font-weight:700;letter-spacing:.2em;
+      text-transform:uppercase;color:#666;
+    }
+    .final-h{
+      font-size:clamp(36px,5vw,64px);font-weight:900;
+      line-height:1;letter-spacing:-.02em;text-transform:uppercase;
+    }
+    .final-h em{font-style:normal;color:var(--accent)}
+    .final-sub{font-size:15px;color:#888;max-width:480px;line-height:1.6}
+    .btn-final{
+      background:var(--accent);color:#fff;
+      font-size:12px;font-weight:900;letter-spacing:.12em;
+      text-transform:uppercase;padding:18px 40px;
+      text-decoration:none;border:2px solid var(--accent);
+      transition:background .1s,border-color .1s;
+      display:inline-flex;align-items:center;gap:12px;
+      margin-top:8px;
+    }
+    .btn-final:hover{background:var(--accent-h);border-color:var(--accent-h)}
+    .btn-final .arr{font-size:16px;transition:transform .15s;display:inline-block}
+    .btn-final:hover .arr{transform:translateX(5px)}
+
+    /* ── FOOTER ── */
+    footer{
+      background:var(--fg);color:#555;
+      padding:20px 40px;
+      display:flex;align-items:center;justify-content:space-between;
+      border-top:2px solid #222;
+    }
+    .ft-l{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+    .ft-r{font-size:10px;color:#444;letter-spacing:.06em;text-transform:uppercase}
+  </style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="hd-logo">
+    <div class="hd-sq"></div>
+    <span class="hd-name">Portaldot Analyst</span>
+  </div>
+  <nav class="hd-nav">
+    <a href="#problem"  class="hd-link">Problem</a>
+    <a href="#how"      class="hd-link">How It Works</a>
+    <a href="#features" class="hd-link">Features</a>
+    <a href="/app"      class="hd-btn">Launch Dashboard <span style="margin-left:6px">→</span></a>
+  </nav>
+</header>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-eyebrow">Portaldot Hackathon · 2026 · AI Track</div>
+    <h1 class="hero-h1">
+      Onchain<br>
+      Data<br>
+      <em>Intelligence</em>
+    </h1>
+    <p class="hero-desc">
+      Blockchain data is locked behind developer tooling.
+      <strong>We fix that.</strong> Ask any question in plain English —
+      Gemma AI routes it to 20+ live chain queries and returns
+      structured data instantly, with every query logged on-chain.
+    </p>
+    <div class="hero-cta">
+      <a href="/app" class="btn-primary">Launch Dashboard <span class="arr">→</span></a>
+      <a href="#problem" class="btn-secondary">Learn More</a>
+    </div>
+  </div>
+
+  <!-- Live preview panel -->
+  <div class="hero-right">
+    <div class="preview-label">Live Query Preview</div>
+
+    <div class="preview-input">
+      <span class="pi-prompt">›</span>
+      <span>top 20 POT holders</span>
+    </div>
+
+    <div class="preview-result">
+      <div class="pr-head">
+        <span class="pr-fn">get_top_holders(max_results=20)</span>
+        <div class="pr-meta">
+          <span class="pr-pill">23 ms</span>
+          <span class="pr-pill c">⚡ cached</span>
+        </div>
+      </div>
+      <table class="prev">
+        <thead>
+          <tr>
+            <th>Address</th>
+            <th style="text-align:right">Free POT</th>
+            <th style="text-align:right">Total POT</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="a">5GrwvaEF…GKutQY</td>
+            <td class="n">847,293.00</td>
+            <td class="n">847,293.00</td>
+          </tr>
+          <tr>
+            <td class="a">5FHneW46…M694ty</td>
+            <td class="n">421,847.50</td>
+            <td class="n">421,847.50</td>
+          </tr>
+          <tr>
+            <td class="a">5FLSigC9…jh5T6J</td>
+            <td class="n">89,234.00</td>
+            <td class="n">89,234.00</td>
+          </tr>
+          <tr>
+            <td class="a">5DAan…SLZHT</td>
+            <td class="n">12,400.75</td>
+            <td class="n">12,400.75</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="preview-result" style="border-left:3px solid var(--accent)">
+      <div style="padding:10px 12px;background:var(--accent-lt)">
+        <div style="font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:4px">✦ AI Analysis</div>
+        <div style="font-size:11px;line-height:1.55;color:var(--fg2)">
+          Alice controls 847K POT — 63% of circulating supply.
+          High concentration: top 3 accounts hold 98% of all tokens.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── STATS BAR ── -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-n">20<span>+</span></div>
+    <div class="stat-l">Query Types</div>
+  </div>
+  <div class="stat">
+    <div class="stat-n" style="color:var(--accent)">AI</div>
+    <div class="stat-l">Powered Routing</div>
+  </div>
+  <div class="stat">
+    <div class="stat-n">100<span>%</span></div>
+    <div class="stat-l">Live Chain Data</div>
+  </div>
+  <div class="stat">
+    <div class="stat-n">0</div>
+    <div class="stat-l">SQL / Code Required</div>
+  </div>
+</div>
+
+<!-- ── PROBLEM ── -->
+<section class="sec" id="problem">
+  <div class="sec-inner">
+    <div class="sec-num">01. The Problem</div>
+    <div class="problem-grid">
+      <div class="problem-left">
+        <p class="problem-quote">
+          "Blockchain data is locked behind developer tooling.
+          Non-technical users have no access."
+        </p>
+        <p class="problem-attr">— The barrier we eliminate</p>
+      </div>
+      <div class="problem-right">
+        <p class="problem-body">
+          To answer a simple question like <strong>"who holds the most tokens?"</strong>
+          requires knowing the SDK, pallet names, data structures, and how to write
+          Python against an RPC node. Investors, auditors, compliance teams, and
+          business analysts are locked out entirely.
+        </p>
+        <p class="problem-body">
+          Existing block explorers show raw data but don't answer questions.
+          They require you to already know what you're looking for.
+          <strong>The barrier to reading blockchain state shouldn't be knowing
+          SDK method names.</strong>
+        </p>
+        <p class="problem-body">
+          This is what that problem looks like — solved.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="sec" id="how">
+  <div class="sec-inner">
+    <div class="sec-num">02. How It Works</div>
+    <h2 class="sec-h">Three steps.<br>No code.</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-n">01</div>
+        <div class="step-h">Ask in Plain English</div>
+        <p class="step-p">
+          Type any question about the Portaldot blockchain —
+          "show me the top token holders", "are there stuck multisig proposals?",
+          "how much POT moved in the last 100 blocks?" No special syntax required.
+        </p>
+      </div>
+      <div class="step">
+        <div class="step-n">02</div>
+        <div class="step-h">Gemma AI Routes</div>
+        <p class="step-p">
+          Google's Gemma 27B maps your question to the correct one of 20+
+          chain query functions. It extracts parameters like block ranges and
+          addresses automatically — you don't specify them unless you want to.
+        </p>
+      </div>
+      <div class="step">
+        <div class="step-n">03</div>
+        <div class="step-h">Chain Responds</div>
+        <p class="step-p">
+          The Python SDK queries live Portaldot state over WebSocket.
+          Results are cached, charted, and returned in milliseconds.
+          Every query also logs itself on-chain as a signed extrinsic,
+          paying real POT gas.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CAPABILITIES ── -->
+<section class="sec" id="features">
+  <div class="sec-inner">
+    <div class="sec-num">03. Capabilities</div>
+    <h2 class="sec-h">What you can<br>query right now.</h2>
+    <div class="caps">
+      <div class="cap">
+        <div class="cap-icon blue">◈</div>
+        <div class="cap-h">Token Analytics</div>
+        <p class="cap-p">Top holders, total supply, token concentration, wealth distribution, transfer volume, and largest individual transfers.</p>
+      </div>
+      <div class="cap">
+        <div class="cap-icon">⇄</div>
+        <div class="cap-h">Transfer Intelligence</div>
+        <p class="cap-p">Full transfer history, active address counts, transfer volume aggregates, and whale transaction detection across any block range.</p>
+      </div>
+      <div class="cap">
+        <div class="cap-icon blue">◉</div>
+        <div class="cap-h">Multisig Monitoring</div>
+        <p class="cap-p">Detect stale pending proposals, rank multisigs by locked POT, track the full lifecycle from creation to execution or cancellation.</p>
+      </div>
+      <div class="cap">
+        <div class="cap-icon">▦</div>
+        <div class="cap-h">Network Stats</div>
+        <p class="cap-p">Extrinsics per block, average block time, fee statistics, live block feed, and per-block deep dives showing every extrinsic.</p>
+      </div>
+      <div class="cap">
+        <div class="cap-icon blue">✦</div>
+        <div class="cap-h">AI-Generated Insights</div>
+        <p class="cap-p">After every query, ask Gemma to interpret the data. Get 2–3 sentences of sharp analytical commentary — patterns, anomalies, risks.</p>
+      </div>
+      <div class="cap">
+        <div class="cap-icon">⬡</div>
+        <div class="cap-h">On-Chain Audit Trail</div>
+        <p class="cap-p">Every query logs a System.remark_with_event extrinsic signed by Alice, paying POT gas. All analyst activity is permanently on-chain.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TECH STACK ── -->
+<section class="sec">
+  <div class="sec-inner">
+    <div class="sec-num">04. Architecture</div>
+    <h2 class="sec-h">Built on<br>real infrastructure.</h2>
+    <div class="tech-grid">
+      <div class="tech-left">
+        <pre class="tech-arch">Browser
+  ↓  POST /query
+FastAPI Backend
+  ↓  parse_query()    → Gemma 27B (OpenRouter)
+  ↓  sdk_runner.*()   → substrate-interface
+  ↓  log_query_onchain()
+Portaldot Node  (WSL · ws://127.0.0.1:9944)
+  Substrate Layer-0 · V13 metadata
+  POT token · 14 decimals · --dev --alice</pre>
+      </div>
+      <div class="tech-right">
+        <ul class="tech-list">
+          <li class="tech-item">
+            <span class="tech-dot"></span>
+            <span class="tech-name">Portaldot</span>
+            <span class="tech-desc">Substrate-based Layer-0, native POT gas token</span>
+          </li>
+          <li class="tech-item">
+            <span class="tech-dot"></span>
+            <span class="tech-name">Gemma 27B</span>
+            <span class="tech-desc">Google's LLM via OpenRouter for NL routing + insights</span>
+          </li>
+          <li class="tech-item">
+            <span class="tech-dot"></span>
+            <span class="tech-name">substrate-interface</span>
+            <span class="tech-desc">Python SDK for live WebSocket chain queries</span>
+          </li>
+          <li class="tech-item">
+            <span class="tech-dot"></span>
+            <span class="tech-name">FastAPI</span>
+            <span class="tech-desc">Backend with in-memory caching and 20 query endpoints</span>
+          </li>
+          <li class="tech-item">
+            <span class="tech-dot"></span>
+            <span class="tech-name">Chart.js</span>
+            <span class="tech-desc">Line, bar, and doughnut charts for visual data analysis</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FINAL CTA ── -->
+<section class="final-cta">
+  <div class="final-eyebrow">Ready to query the chain?</div>
+  <h2 class="final-h">Start in<br><em>30 seconds.</em></h2>
+  <p class="final-sub">
+    No configuration needed. The dashboard connects to the live Portaldot
+    dev node automatically. Type a question and get answers.
+  </p>
+  <a href="/app" class="btn-final">Launch Dashboard <span class="arr">→</span></a>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <span class="ft-l">Portaldot Onchain Analyst · 2026</span>
+  <span class="ft-r">Built on Portaldot · Powered by Gemma 27B</span>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: portaldot-analyst-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false          # you paste this in the Render dashboard
+      - key: PORTALDOT_WS_URL
+        sync: false          # set to your public node URL e.g. wss://rpc.portaldot.io

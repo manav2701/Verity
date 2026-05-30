@@ -1,0 +1,5 @@
+substrate-interface
+fastapi
+uvicorn
+python-dotenv
+requests

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(rustup --version 2>&1)",
+      "PowerShell(cargo --version 2>&1)",
+      "PowerShell(py -0 2>&1)"
+    ]
+  }
+}

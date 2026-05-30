@@ -1,0 +1,12 @@
+.env
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+portaldot-testnet-ubuntu/
+portaldot-mainnet-ubuntu/
+*.tar.gz
