@@ -568,9 +568,11 @@ function baseOpts(scales = true) {
 }
 
 // ── Status + dashboard polling ─────────────────────────────────────────────
+const HEADERS = { 'ngrok-skip-browser-warning': 'true' };
+
 async function pollStatus() {
   try {
-    const j = await (await fetch(`${API}/health`)).json();
+    const j = await (await fetch(`${API}/health`, {headers: HEADERS})).json();
     const ok = j.status === 'ok';
     document.getElementById('sdot').className   = 'sdot ' + (ok ? 'ok' : 'err');
     document.getElementById('stext').textContent = ok ? 'Connected' : 'Offline';
@@ -584,7 +586,7 @@ async function pollStatus() {
 
 async function pollDash() {
   try {
-    const j = await (await fetch(`${API}/stats`)).json();
+    const j = await (await fetch(`${API}/stats`, {headers: HEADERS})).json();
     if (j.latest_block != null) document.getElementById('dBlock').textContent = `#${j.latest_block}`;
     if (j.total_supply_pot != null) document.getElementById('dSupply').textContent = fmtNum(j.total_supply_pot);
   } catch {}
@@ -592,7 +594,7 @@ async function pollDash() {
 
 async function pollFeed() {
   try {
-    const j = await (await fetch(`${API}/blocks/recent?count=8`)).json();
+    const j = await (await fetch(`${API}/blocks/recent?count=8`, {headers: HEADERS})).json();
     const blocks = j.blocks || [];
     const now = Date.now();
     const newOnes = blocks.filter(b => !feedBlocks.find(fb => fb.number === b.number));
@@ -643,7 +645,8 @@ async function run() {
   pushHistory(text);
   try {
     const resp = await fetch(`${API}/query`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST',
+      headers:{'Content-Type':'application/json','ngrok-skip-browser-warning':'true'},
       body: JSON.stringify({text})
     });
     const json = await resp.json();
@@ -875,7 +878,7 @@ async function analyzeResult() {
   area.innerHTML = `<div class="loading" style="padding:12px 18px"><div class="spin"></div><span>Gemma is reading the data…</span></div>`;
   try {
     const resp = await fetch(`${API}/analyze`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{...HEADERS,'Content-Type':'application/json'},
       body: JSON.stringify({ fn_name:curFn, data:curRows.slice(0,15), question:document.getElementById('qi').value })
     });
     const j = await resp.json();
@@ -896,7 +899,7 @@ async function openAddr(addr) {
     `<div class="loading"><div class="spin"></div><span>Loading profile…</span></div>`;
   document.getElementById('addrModal').style.display = 'flex';
   try {
-    const j = await (await fetch(`${API}/address/${encodeURIComponent(addr)}`)).json();
+    const j = await (await fetch(`${API}/address/${encodeURIComponent(addr)}`, {headers: HEADERS})).json();
     renderModal(addr, j);
   } catch(e) {
     document.getElementById('mBody').innerHTML =

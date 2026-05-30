@@ -15,8 +15,17 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
+
+# ngrok passes a browser-warning interstitial for free accounts unless
+# the request includes this header — the frontend sends it automatically.
+from fastapi import Request
+@app.middleware("http")
+async def skip_ngrok_warning(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["ngrok-skip-browser-warning"] = "true"
+    return response
 
 # ── In-memory cache ────────────────────────────────────────────────────────────
 _cache: dict = {}
@@ -228,8 +237,9 @@ def stats():
     if hit:
         return cached
     try:
-        block        = sdk_runner.portaldot.get_block()
-        total_supply = sdk_runner.portaldot.query('Balances', 'TotalIssuance').value
+        with sdk_runner._lock:
+            block        = sdk_runner.portaldot.get_block()
+            total_supply = sdk_runner.portaldot.query('Balances', 'TotalIssuance').value
         result = {
             "latest_block":     block['header']['number'],
             "total_supply_pot": round(total_supply / sdk_runner.POT_DECIMAL, 2),
@@ -247,7 +257,8 @@ def blocks_recent(count: int = 4):
     if hit:
         return cached
     try:
-        current = sdk_runner.portaldot.get_block()['header']['number']
+        with sdk_runner._lock:
+            current = sdk_runner.portaldot.get_block()['header']['number']
         result  = []
         for n in range(max(0, current - count + 1), current + 1):
             block = sdk_runner.portaldot.get_block(block_number=n)
@@ -278,6 +289,14 @@ def address_profile(address: str):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/config.js")
+def serve_config():
+    from fastapi.responses import Response
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'frontend', 'config.js')
+    with open(path, 'r', encoding='utf-8') as f:
+        return Response(content=f.read(), media_type="application/javascript")
 
 
 @app.get("/", response_class=HTMLResponse)

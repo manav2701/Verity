@@ -1,7 +1,10 @@
 import os
+import threading
 from substrateinterface import SubstrateInterface, Keypair
 from substrateinterface.extensions import SubstrateNodeExtension
 from dotenv import load_dotenv
+
+_lock = threading.Lock()
 
 load_dotenv()
 
